@@ -10,9 +10,6 @@ services:
       - /mnt/userdata/camera:/mnt/userdata/camera
       # Проброс папки проекта
       - /root/projects/foto_obhodov:/app
-    devices:
-      # Проброс NPU для NanoPi/Rockchip
-      - /dev/rknn:/dev/rknn
     environment:
       - TZ=Europe/Moscow
     network_mode: host

@@ -4,11 +4,11 @@ import shutil
 import logging
 from pathlib import Path
 from max_api import send_photo_to_max
-from rknn_yolo import RKNNYoloDetector
+from ultralytics import YOLO
 
 # --- КОНФИГУРАЦИЯ ---
 SOURCE_DIR = "/mnt/userdata/camera" # Путь к папке с фото (монтируется в Docker)
-MODEL_PATH = "yolov8m.rknn"         # Путь к модели RKNN (28Мб, высокая точность)
+MODEL_NAME = "yolov8n.pt"           # Модель YOLO (Nano, скачивается автоматически)
 CONFIDENCE = 0.5                     # Порог уверенности (0.0 - 1.0)
 EXTENSIONS = {".jpg", ".jpeg", ".png"}
 
@@ -23,13 +23,13 @@ logging.basicConfig(
 
 def run_once():
     """Разовый запуск сканирования."""
-    if not os.path.exists(MODEL_PATH):
-        logging.error(f"Файл модели {MODEL_PATH} не найден!")
+    logging.info(f"Загрузка модели {MODEL_NAME}...")
+    try:
+        model = YOLO(MODEL_NAME)
+    except Exception as e:
+        logging.error(f"Ошибка при загрузке модели: {e}")
         return
 
-    logging.info("Инициализация детектора NPU...")
-    detector = RKNNYoloDetector(MODEL_PATH, conf_threshold=CONFIDENCE)
-    
     logging.info(f"Начинаю сканирование папки: {SOURCE_DIR}")
     
     try:
@@ -52,10 +52,13 @@ def run_once():
                 logging.info(f"Проверка: {img_str_path}")
                 
                 try:
-                    # Детекция человека на NPU
-                    if detector.has_person(img_str_path):
+                    # Детекция человека (класс 0)
+                    results = model(img_str_path, conf=CONFIDENCE, verbose=False)
+                    is_person = any(0 in r.boxes.cls for r in results)
+
+                    if is_person:
                         logging.info(f"👤 ЧЕЛОВЕК ОБНАРУЖЕН! Отправка в Макс...")
-                        success = send_photo_to_max(img_str_path, text=f"Обнаружен человек! \nФайл: {img_path.name}")
+                        send_photo_to_max(img_str_path, text=f"Обнаружен человек! \nФайл: {img_path.name}")
                         
                     # В любом случае удаляем файл после обработки
                     img_path.unlink()
@@ -64,19 +67,19 @@ def run_once():
                 except Exception as e:
                     logging.error(f"Ошибка при обработке {img_path.name}: {e}")
 
-        # После обработки всех файлов проверяем пустые подпапки и удаляем их
-        for folder in base_path.iterdir():
-            if folder.is_dir() and not any(folder.iterdir()):
+        # Очистка пустых папок
+        for folder in sorted(base_path.glob("**/"), reverse=True):
+            if folder != base_path and folder.is_dir() and not any(folder.iterdir()):
                 try:
                     folder.rmdir()
-                    logging.info(f"🧹 Удалена пустая папка: {folder.name}")
-                except Exception as e:
-                    logging.error(f"Не удалось удалить папку {folder}: {e}")
+                    logging.info(f"🧹 Удалена пустая папка: {folder.relative_to(base_path)}")
+                except:
+                    pass
 
         logging.info("--- Сканирование завершено ---")
 
-    finally:
-        detector.release()
+    except Exception as e:
+        logging.error(f"Глобальная ошибка при сканировании: {e}")
 
 if __name__ == "__main__":
     run_once()
