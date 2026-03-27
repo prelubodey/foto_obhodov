@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.log
+*.pyc
+yolov8n.rknn
+rknn_toolkit_lite2-*.whl
+.DS_Store
+.vscode/

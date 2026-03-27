@@ -3,10 +3,12 @@ services:
     build: .
     container_name: foto_obhodov
     restart: unless-stopped
+    env_file:
+      - .env
     volumes:
-      # Проброс папки с фото (измените путь слева, если он другой)
+      # Проброс папки с фото
       - /mnt/userdata/camera:/mnt/userdata/camera
-      # Проброс папки проекта для сохранения логов (монтируется в /app)
+      # Проброс папки проекта
       - /root/projects/foto_obhodov:/app
     devices:
       # Проброс NPU для NanoPi/Rockchip

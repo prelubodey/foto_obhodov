@@ -2,9 +2,9 @@ import requests
 import os
 import logging
 
-# Настройки API Макс
-TOKEN = "f9LHodD0cOJ3sZU5I6lEDWPRsJYkTGQNgXt-FemScOPTCCcLO1gzlyPrRLPmBDeEr5lbP8jiaf5uQMYvQkR7"
-CHAT_ID = -72680589095135
+# Настройки API Макс берутся из переменных окружения
+TOKEN = os.environ.get("MAX_TOKEN")
+CHAT_ID = os.environ.get("MAX_CHAT_ID")
 BASE_URL = "https://platform-api.max.ru"
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -13,6 +13,10 @@ def send_photo_to_max(file_path, text="Обнаружен человек!"):
     """
     Загружает изображение и отправляет его в чат Макс.
     """
+    if not TOKEN or not CHAT_ID:
+        logging.error("❌ Ошибка: MAX_TOKEN или MAX_CHAT_ID не настроены в .env!")
+        return False
+
     if not os.path.exists(file_path):
         logging.error(f"Файл {file_path} не найден!")
         return False
@@ -75,8 +79,3 @@ def send_photo_to_max(file_path, text="Обнаружен человек!"):
     except Exception as e:
         logging.error(f"⚠️ Произошла ошибка при работе с Макс API: {e}")
         return False
-
-if __name__ == "__main__":
-    # Тестовый запуск, если запустить файл напрямую
-    # send_photo_to_max("test_person.jpg")
-    pass
