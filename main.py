@@ -8,7 +8,7 @@ from rknn_yolo import RKNNYoloDetector
 
 # --- КОНФИГУРАЦИЯ ---
 SOURCE_DIR = "/mnt/userdata/camera" # Путь к папке с фото (монтируется в Docker)
-MODEL_PATH = "yolov8n.rknn"         # Путь к модели RKNN
+MODEL_PATH = "yolov8m.rknn"         # Путь к модели RKNN (28Мб, высокая точность)
 CONFIDENCE = 0.5                     # Порог уверенности (0.0 - 1.0)
 EXTENSIONS = {".jpg", ".jpeg", ".png"}
 
