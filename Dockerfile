@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     libgl1 \
     libglib2.0-0 \
     wget \
+    python3-opencv \
     && rm -rf /var/lib/apt/lists/*
 
 # Создаем рабочую директорию
@@ -20,12 +21,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # --- УСТАНОВКА RKNN-TOOLKIT-LITE2 ---
-# На NanoPi требуется rknnlite. Обычно она ставится из .whl.
-# Мы попытаемся скачать версию 1.6.0 для Python 3.9 (наиболее стабильная для RK3568)
-# Если ссылка изменится или файл будет недоступен, его нужно будет положить в папку проекта и заменить команду на COPY
-RUN wget https://github.com/airockchip/rknn-toolkit2/raw/master/rknn-toolkit-lite2/packages/rknn_toolkit_lite2-1.6.0-cp39-cp39-linux_aarch64.whl \
-    && pip install rknn_toolkit_lite2-1.6.0-cp39-cp39-linux_aarch64.whl \
-    && rm rknn_toolkit_lite2-1.6.0-cp39-cp39-linux_aarch64.whl
+# Rockchip переместил файлы, поэтому мы будем использовать более надежный путь
+# Версия 2.3.0 для Python 3.9
+RUN wget https://github.com/airockchip/rknn-toolkit2/raw/master/rknn-toolkit-lite2/packages/rknn_toolkit_lite2-2.3.0-cp39-cp39-linux_aarch64.whl \
+    && pip install rknn_toolkit_lite2-2.3.0-cp39-cp39-linux_aarch64.whl \
+    && rm rknn_toolkit_lite2-2.3.0-cp39-cp39-linux_aarch64.whl
 
 # Копируем исходный код проекта
 COPY . .
