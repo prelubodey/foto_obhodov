@@ -1,0 +1,16 @@
+services:
+  foto_obhodov:
+    build: .
+    container_name: foto_obhodov
+    restart: unless-stopped
+    volumes:
+      # Проброс папки с фото (измените путь слева, если он другой)
+      - /mnt/userdata/camera:/mnt/userdata/camera
+      # Проброс папки проекта для сохранения логов (монтируется в /app)
+      - /root/projects/foto_obhodov:/app
+    devices:
+      # Проброс NPU для NanoPi/Rockchip
+      - /dev/rknn:/dev/rknn
+    environment:
+      - TZ=Europe/Moscow
+    network_mode: host
