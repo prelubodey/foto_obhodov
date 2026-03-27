@@ -2,6 +2,5 @@
 __pycache__/
 *.log
 *.pyc
-rknn_toolkit_lite2-*.whl
 .DS_Store
 .vscode/
