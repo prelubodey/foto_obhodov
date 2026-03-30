@@ -4,6 +4,7 @@ import logging
 
 # Настройки API Макс берутся из переменных окружения
 TOKEN = os.environ.get("MAX_TOKEN")
+# Очищаем CHAT_ID от пробелов и кавычек
 CHAT_ID_RAW = os.environ.get("MAX_CHAT_ID", "").strip().strip('"').strip("'")
 BASE_URL = "https://platform-api.max.ru"
 
@@ -47,7 +48,10 @@ def send_photo_to_max(file_path, text="Обнаружен человек!"):
         photo_data = upload_res.json()
 
         # ШАГ 3: Отправка сообщения с вложением
+        # Мы используем chat_id, так как шлем в группу (отрицательный ID)
+        # Также дублируем ID в JSON теле запроса для надежности
         message_data = {
+            "chat_id": CHAT_ID_RAW,
             "text": text,
             "attachments": [
                 {
@@ -61,22 +65,9 @@ def send_photo_to_max(file_path, text="Обнаружен человек!"):
             "format": "markdown"
         }
 
-        # --- ПОПЫТКА 1: Стандартная (через user_id в params) ---
-        logging.info(f"Попытка №1: Отправка через user_id в params на {CHAT_ID_RAW}")
-        response = requests.post(
-            f"{BASE_URL}/messages",
-            params={"v": "1.0.0", "user_id": CHAT_ID_RAW},
-            headers=headers,
-            json=message_data,
-            timeout=10
-        )
-
-        if response.status_code == 200:
-            logging.info(f"✅ Фото успешно отправлено.")
-            return True
-
-        # --- ПОПЫТКА 2: Если 404, пробуем chat_id вместо user_id ---
-        logging.warning(f"⚠️ Ошибка {response.status_code}. Попытка №2: замена user_id на chat_id...")
+        logging.info(f"Отправка сообщения в чат: {CHAT_ID_RAW}")
+        
+        # Основной запрос отправки
         response = requests.post(
             f"{BASE_URL}/messages",
             params={"v": "1.0.0", "chat_id": CHAT_ID_RAW},
@@ -84,26 +75,13 @@ def send_photo_to_max(file_path, text="Обнаружен человек!"):
             json=message_data,
             timeout=10
         )
-        if response.status_code == 200:
-            logging.info(f"✅ Фото успешно отправлено через chat_id.")
-            return True
 
-        # --- ПОПЫТКА 3: Передача ID в теле JSON (наиболее надежно) ---
-        logging.warning(f"⚠️ Ошибка {response.status_code}. Попытка №3: передача ID внутри JSON...")
-        message_data["user_id"] = CHAT_ID_RAW
-        response = requests.post(
-            f"{BASE_URL}/messages",
-            params={"v": "1.0.0"},
-            headers=headers,
-            json=message_data,
-            timeout=10
-        )
         if response.status_code == 200:
-            logging.info(f"✅ Фото успешно отправлено через JSON тело.")
+            logging.info(f"✅ Фото {file_name} успешно отправлено.")
             return True
-
-        logging.error(f"❌ Все попытки отправки провалены: {response.status_code} - {response.text}")
-        return False
+        else:
+            logging.error(f"❌ Ошибка отправки сообщения: {response.status_code} - {response.text}")
+            return False
 
     except Exception as e:
         logging.error(f"⚠️ Произошла ошибка при работе с Макс API: {e}")
