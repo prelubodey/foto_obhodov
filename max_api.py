@@ -4,7 +4,6 @@ import logging
 
 # Настройки API Макс берутся из переменных окружения
 TOKEN = os.environ.get("MAX_TOKEN")
-# Очищаем CHAT_ID от пробелов и кавычек, если они вдруг есть в .env
 CHAT_ID_RAW = os.environ.get("MAX_CHAT_ID", "").strip().strip('"').strip("'")
 BASE_URL = "https://platform-api.max.ru"
 
@@ -18,13 +17,9 @@ def send_photo_to_max(file_path, text="Обнаружен человек!"):
         logging.error("❌ Ошибка: MAX_TOKEN или MAX_CHAT_ID не настроены в .env!")
         return False
 
-    try:
-        # Для больших чисел ID в Python важно преобразовывать их строго в int
-        # чтобы библиотека requests передала их правильно без округления
-        CHAT_ID = int(CHAT_ID_RAW)
-    except ValueError:
-        logging.error(f"❌ Ошибка: CHAT_ID '{CHAT_ID_RAW}' не является числом!")
-        return False
+    # В этой версии мы попробуем передавать CHAT_ID как строку в параметрах,
+    # чтобы избежать искажения чисел на уровне библиотеки requests или API.
+    CHAT_ID = CHAT_ID_RAW
 
     if not os.path.exists(file_path):
         logging.error(f"Файл {file_path} не найден!")
@@ -70,10 +65,19 @@ def send_photo_to_max(file_path, text="Обнаружен человек!"):
             "format": "markdown"
         }
 
-        # Передаем CHAT_ID как целое число (int)
+        # Пытаемся отправить, используя строковый ID и проверяя сформированный URL
+        # Некоторые API принимают ID пользователя и в params, и в теле.
+        # Мы попробуем передать его в params как строку.
+        params = {
+            "v": "1.0.0",
+            "user_id": CHAT_ID
+        }
+
+        logging.info(f"Отправка сообщения на Chat ID: {CHAT_ID}")
+        
         response = requests.post(
             f"{BASE_URL}/messages",
-            params={"v": "1.0.0", "user_id": CHAT_ID},
+            params=params,
             headers=headers,
             json=message_data,
             timeout=10
@@ -83,8 +87,22 @@ def send_photo_to_max(file_path, text="Обнаружен человек!"):
             logging.info(f"✅ Фото {file_name} успешно отправлено в Макс (Chat ID: {CHAT_ID}).")
             return True
         else:
+            # Если 404, пробуем альтернативный способ: передать user_id прямо в JSON
+            if response.status_code == 404:
+                logging.warning(f"⚠️ Ошибка 404 при отправке на {CHAT_ID}. Пробую передать ID в теле запроса...")
+                message_data["user_id"] = CHAT_ID # Попытка №2
+                response = requests.post(
+                    f"{BASE_URL}/messages",
+                    params={"v": "1.0.0"},
+                    headers=headers,
+                    json=message_data,
+                    timeout=10
+                )
+                if response.status_code == 200:
+                    logging.info(f"✅ Успешно отправлено (через JSON тело).")
+                    return True
+
             logging.error(f"❌ Ошибка отправки сообщения: {response.status_code} - {response.text}")
-            logging.info(f"Попытка отправки на ID: {CHAT_ID}")
             return False
 
     except Exception as e:
